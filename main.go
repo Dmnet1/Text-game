@@ -26,10 +26,11 @@ func (r *room) deleteKeyInTneRoom() {
 	(*r).keyInTneRoom = false
 	//fmt.Println("Состояние ключей в комнате", (*r).keyInTneRoom)
 }
-func (r *room) deleteBackpackInTneRoom() {
+
+/*func (r *room) deleteBackpackInTneRoom() {
 	(*r).backpackInTheRoom = false
 	//fmt.Println("Состояние рюкзака в комнате", (*r).backpackInTheRoom)
-}
+}*/
 
 type Player struct {
 	Command, Answer                                        string
@@ -41,9 +42,35 @@ type GameWorld struct {
 	corridorStatus, kitchenStatus, roomStatus bool
 	*Player
 	*room
-
 	//street
-	//Player
+}
+
+func newPlayer(Command, Answer string, backpackIsOn, abstractsInTheBackpack, keyInTheBackpack bool) *Player {
+	return &Player{
+		Command:                Command,
+		Answer:                 Answer,
+		backpackIsOn:           backpackIsOn,
+		abstractsInTheBackpack: abstractsInTheBackpack,
+		keyInTheBackpack:       keyInTheBackpack,
+	}
+}
+
+func newRoom(backpackInTheRoom, abstractsInTneRoom, keyInTneRoom bool) *room {
+	return &room{
+		backpackInTheRoom:  backpackInTheRoom,
+		abstractsInTneRoom: abstractsInTneRoom,
+		keyInTneRoom:       keyInTneRoom,
+	}
+}
+
+func newGameWorld(corridorStatus, kitchenStatus, roomStatus bool, Player Player, room room) *GameWorld {
+	return &GameWorld{
+		corridorStatus: corridorStatus,
+		kitchenStatus:  kitchenStatus,
+		roomStatus:     roomStatus,
+		Player:         &Player,
+		room:           &room,
+	}
 }
 
 // Вещи, которые налутал игрок
@@ -61,7 +88,6 @@ func (g *GameWorld) getItemsFromTheRoom(s string) string {
 	} else {
 		(*g).Answer = "нет такого"
 	}
-
 	//fmt.Println((*g).Answer)
 	return (*g).Answer
 }
@@ -241,20 +267,27 @@ func (g *GameWorld) putTheItemInTheBackpack(c string) /*(Answer string)*/ {
 /*type street struct {
 }*/
 
-func (g *GameWorld) GetAnswer() string {
+/*func (g *GameWorld) GetAnswer() string {
 	fmt.Println((*g).Answer)
 	return (*g).Answer
-}
+}*/
 
 func handleCommand(cmd string) string {
-	/*c := GameWorld.GetAnswer()
-	fmt.Println(cmd, "-", c)*/
-
-	return
+	fmt.Println(cmd, answer)
+	return answer
 }
 
-func initGame() {
-	cmd := []string{"осмотреться", "идти коридор",
+/*type gameCase struct {
+	step    int
+	command string
+	answer  string
+}*/
+
+var command string
+var answer string
+
+func initGame() ([]string, *GameWorld) {
+	commands := []string{"осмотреться", "идти коридор",
 		"идти комната", "осмотреться", "взять ключи",
 		"надеть рюкзак", "взять ключи", "осмотреться",
 		"взять конспекты", "идти коридор"}
@@ -267,45 +300,20 @@ func initGame() {
 	g.addThingsInTheRoom()
 	g.addPlayerPosition()
 
-	for i := range cmd {
-		c := cmd[i]
-		g.putTheItemInTheBackpack(g.takeTheBackpack(g.getPlayerPosition(c)))
-		//g.GetAnswer()
-		handleCommand(g.Player.Command)
-
-		fmt.Println("ИТЕРАЦИЯ-", i, "/", cmd[i], "/", g.Answer)
-
-	}
-}
-func newPlayer(Command, Answer string, backpackIsOn, abstractsInTheBackpack, keyInTheBackpack bool) *Player {
-	return &Player{
-		Command:                Command,
-		Answer:                 Answer,
-		backpackIsOn:           backpackIsOn,
-		abstractsInTheBackpack: abstractsInTheBackpack,
-		keyInTheBackpack:       keyInTheBackpack,
-	}
-}
-
-func newRoom(backpackInTheRoom, abstractsInTneRoom, keyInTneRoom bool) *room {
-	return &room{
-		backpackInTheRoom:  backpackInTheRoom,
-		abstractsInTneRoom: abstractsInTneRoom,
-		keyInTneRoom:       keyInTneRoom,
-	}
-}
-
-func newGameWorld(corridorStatus, kitchenStatus, roomStatus bool, Player Player, room room) *GameWorld {
-	return &GameWorld{
-		corridorStatus: corridorStatus,
-		kitchenStatus:  kitchenStatus,
-		roomStatus:     roomStatus,
-		Player:         &Player,
-		room:           &room,
-	}
+	return commands, g
 }
 
 func main() {
-	initGame()
+	c, g := initGame()
+	for i := range c {
+		command = c[i]
+		g.putTheItemInTheBackpack(g.takeTheBackpack(g.getPlayerPosition(command)))
+		//g.GetAnswer()
+		answer = g.Answer
+		handleCommand(command)
+
+		fmt.Println("ИТЕРАЦИЯ-", i, "/", c[i], "/", g.Answer)
+
+	}
 
 }

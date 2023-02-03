@@ -1,319 +1,293 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-type room struct {
-	backpackInTheRoom, abstractsInTneRoom, keyInTneRoom bool
+type Location struct {
+	Corridor, Kitchen, Street, Room string
+	Answer                          map[string]string
+	StatusLocation                  map[string]bool
 }
 
-// 1.начальное состояние предметов в комнате.
-func (r *room) addThingsInTheRoom() {
-	(*r).abstractsInTneRoom = true
-	(*r).keyInTneRoom = true
-	(*r).backpackInTheRoom = true
-	//fmt.Println("Лекции находятся в комнате - ", (*r).abstractsInTneRoom)
-	//fmt.Println("Ключи находятся в комнате - ", (*r).keyInTneRoom)
-	//fmt.Println("Рюкзак находятся в комнате - ", (*r).backpackInTheRoom)
-}
-
-// Состояние меняется, когда вещь добавляется в рюкзак. Возможно нужно сделать обычным присваиванием в методе putTheItemInTheBackpack,
-// чтобы не использовать лишние методы.
-func (r *room) deleteAbstractsInTneRoom() {
-	(*r).abstractsInTneRoom = false
-	//fmt.Println("Состояние конспектов в комнате", (*r).abstractsInTneRoom)
-}
-func (r *room) deleteKeyInTneRoom() {
-	(*r).keyInTneRoom = false
-	//fmt.Println("Состояние ключей в комнате", (*r).keyInTneRoom)
-}
-
-/*func (r *room) deleteBackpackInTneRoom() {
-	(*r).backpackInTheRoom = false
-	//fmt.Println("Состояние рюкзака в комнате", (*r).backpackInTheRoom)
-}*/
-
-type Player struct {
-	Command, Answer                                        string
-	backpackIsOn, abstractsInTheBackpack, keyInTheBackpack bool
-}
-
-// Игровой мир
-type GameWorld struct {
-	corridorStatus, kitchenStatus, roomStatus bool
-	*Player
-	*room
-	//street
-}
-
-func newPlayer(Command, Answer string, backpackIsOn, abstractsInTheBackpack, keyInTheBackpack bool) *Player {
-	return &Player{
-		Command:                Command,
-		Answer:                 Answer,
-		backpackIsOn:           backpackIsOn,
-		abstractsInTheBackpack: abstractsInTheBackpack,
-		keyInTheBackpack:       keyInTheBackpack,
+func newLocation(Corridor, Kitchen, Street, Room string) *Location {
+	return &Location{
+		Corridor:       Corridor,
+		Kitchen:        Kitchen,
+		Street:         Street,
+		Room:           Room,
+		Answer:         nil,
+		StatusLocation: nil,
 	}
 }
 
-func newRoom(backpackInTheRoom, abstractsInTneRoom, keyInTneRoom bool) *room {
-	return &room{
-		backpackInTheRoom:  backpackInTheRoom,
-		abstractsInTneRoom: abstractsInTneRoom,
-		keyInTneRoom:       keyInTneRoom,
+type Items struct {
+	Key, Abstracts, Backpack, Door, onTable string
+	BackpackTrigger                         bool
+}
+
+func newItems(BackpackTrigger bool, Key, Abstracts, Backpack, Door, onTable string) *Items {
+	return &Items{
+		Key:             Key,
+		Abstracts:       Abstracts,
+		Backpack:        Backpack,
+		Door:            Door,
+		onTable:         onTable,
+		BackpackTrigger: BackpackTrigger,
 	}
 }
 
-func newGameWorld(corridorStatus, kitchenStatus, roomStatus bool, Player Player, room room) *GameWorld {
-	return &GameWorld{
-		corridorStatus: corridorStatus,
-		kitchenStatus:  kitchenStatus,
-		roomStatus:     roomStatus,
-		Player:         &Player,
-		room:           &room,
+type Commands struct {
+	Answer, LookAround, Go, PutOn, Take, Apply string
+}
+
+func newCommands(Answer, LookAround, Go, PutOn, Take, Apply string) *Commands {
+	return &Commands{
+		Answer:     Answer,
+		LookAround: LookAround,
+		Go:         Go,
+		PutOn:      PutOn,
+		Take:       Take,
+		Apply:      Apply,
 	}
 }
 
-// Вещи, которые налутал игрок
-func (g *GameWorld) getItemsFromTheRoom(s string) string {
-	if (*g).abstractsInTneRoom == true || (*g).keyInTneRoom == true {
-		switch s {
-		case "взять конспекты":
-			(*g).abstractsInTheBackpack = true
-			(*g).Answer = "предмет добавлен в инвентарь: конспекты"
+type ResultsAfterSplit struct {
+	Action, ItemOne, ItemTwo string
+}
 
-		case "взять ключи":
-			(*g).keyInTheBackpack = true
-			(*g).Answer = "предмет добавлен в инвентарь: ключи"
+func newResultsAfterSplit(Action, ItemOne, ItemTwo string) *ResultsAfterSplit {
+	return &ResultsAfterSplit{
+		Action:  Action,
+		ItemOne: ItemOne,
+		ItemTwo: ItemTwo,
+	}
+}
+
+func (r *ResultsAfterSplit) splitTheCommand(command string) {
+	splitCmd := strings.Fields(command)
+	for i := 0; i < len(splitCmd); i++ {
+		if splitCmd[i] == "осмотреться" || splitCmd[i] == "идти" || splitCmd[i] == "взять" ||
+			splitCmd[i] == "применить" || splitCmd[i] == "надеть" {
+			r.Action = splitCmd[i]
 		}
-	} else {
-		(*g).Answer = "нет такого"
-	}
-	//fmt.Println((*g).Answer)
-	return (*g).Answer
-}
-
-// 2. Стартовая позиция игрока относительно мира.
-func (g *GameWorld) addPlayerPosition() {
-	(*g).kitchenStatus = true
-	(*g).corridorStatus = false
-	(*g).roomStatus = false
-}
-
-// 3. Метод должен работать в главном цикле, после него должна находиться логика добавления предметов.
-// В методе описано позиционирование игрока.
-func (g *GameWorld) getPlayerPosition(command string) (c string) {
-	if (*g).kitchenStatus == true {
-		switch command {
+		if splitCmd[i] == "комната" || splitCmd[i] == "коридор" || splitCmd[i] == "кухня" ||
+			splitCmd[i] == "улица" || splitCmd[i] == "ключи" || splitCmd[i] == "конспекты" ||
+			splitCmd[i] == "дверь" || splitCmd[i] == "рюкзак" {
+			r.ItemOne = splitCmd[i]
+		}
+		if splitCmd[i] == "дверь" {
+			r.ItemTwo = splitCmd[i]
+		}
+		/*switch splitCmd[i] {
 		case "осмотреться":
-			(*g).Answer = "ты находишься на кухне, на столе чай, надо собрать рюкзак и идти в универ. можно пройти - коридор"
-			(*g).corridorStatus = false
-			(*g).roomStatus = false
-			(*g).kitchenStatus = true
-			c = command
-			//fmt.Println("1", Command, "-", g.Answer)
-			//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-		case "идти коридор":
-			(*g).Answer = "ничего интересного. можно пройти - кухня, комната, улица"
-			(*g).corridorStatus = true
-			(*g).kitchenStatus = false
-			(*g).roomStatus = false
-			c = command
-			//fmt.Println("2", Command, "-", g.Answer)
-			//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-		case "идти комната":
-			(*g).Answer = "нет пути в комната"
-			(*g).kitchenStatus = true
-			(*g).corridorStatus = false
-			(*g).roomStatus = false
-			c = command
-			//fmt.Println("3", Command, "-", g.Answer)
-			//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-		}
-		//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-		c = command
-	}
+			r.Action = splitCmd[i]
 
-	if (*g).corridorStatus == true {
-		if command == "идти комната" {
-			(*g).Answer = "ты в своей комнате. можно пройти - коридор"
-			(*g).roomStatus = true
-			(*g).kitchenStatus = false
-			(*g).corridorStatus = false
-			c = command
-			//fmt.Println("4", Command, "-", g.Answer)
-			//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-		}
-		c = command
-	}
+		case "идти":
+			r.Action = splitCmd[i]
+		case "комната":
+			r.ItemOne = splitCmd[i]
+		case "коридор":
+			r.ItemOne = splitCmd[i]
+		case "кухня":
+			r.ItemOne = splitCmd[i]
+		case "улица":
+			r.ItemOne = splitCmd[i]
 
-	//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-	if (*g).roomStatus == true {
-		if g.abstractsInTneRoom == true && g.keyInTneRoom == true && g.backpackInTheRoom == true {
-			if command == "осмотреться" {
-				(*g).Answer = "на столе: ключи, конспекты, на стуле - рюкзак. можно пройти - коридор"
-				(*g).roomStatus = true
-				(*g).kitchenStatus = false
-				(*g).corridorStatus = false
-				c = command
-				//fmt.Println("5", Command, "-", g.Answer)
-				//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-			}
-			if command == "идти коридор" {
-				(*g).Answer = "ничего интересного. можно пройти - кухня, комната, улица"
-				(*g).corridorStatus = true
-				(*g).kitchenStatus = false
-				(*g).roomStatus = false
-				c = command
-			}
-		}
-		if g.abstractsInTneRoom == true && g.keyInTneRoom == true && g.backpackInTheRoom == false {
-			if command == "осмотреться" {
-				(*g).Answer = "на столе: ключи, конспекты. можно пройти - коридор"
-				(*g).roomStatus = true
-				(*g).kitchenStatus = false
-				(*g).corridorStatus = false
-				c = command
-				//fmt.Println("6", Command, "-", g.Answer)
-				//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-			}
-			if command == "идти коридор" {
-				(*g).Answer = "ничего интересного. можно пройти - кухня, комната, улица"
-				(*g).corridorStatus = true
-				(*g).kitchenStatus = false
-				(*g).roomStatus = false
-				c = command
-			}
-		}
-		if g.abstractsInTneRoom == true && g.keyInTneRoom == false && g.backpackInTheRoom == false {
-			if command == "осмотреться" {
-				(*g).Answer = "на столе: конспекты. можно пройти - коридор"
-				(*g).roomStatus = true
-				(*g).kitchenStatus = false
-				(*g).corridorStatus = false
-				c = command
-				//fmt.Println("7", Command, "-", g.Answer)
-				//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-			}
-			if command == "идти коридор" {
-				(*g).Answer = "ничего интересного. можно пройти - кухня, комната, улица"
-				(*g).corridorStatus = true
-				(*g).kitchenStatus = false
-				(*g).roomStatus = false
-				c = command
-			}
-		}
-		if g.abstractsInTneRoom == false && g.keyInTneRoom == false && g.backpackInTheRoom == false {
-			if command == "осмотреться" {
-				(*g).Answer = "пустая комната. можно пройти - коридор"
-				(*g).roomStatus = true
-				(*g).kitchenStatus = false
-				(*g).corridorStatus = false
-				c = command
-				//fmt.Println("8", Command, "-", g.Answer)
-				//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-			}
-			if command == "идти коридор" {
-				(*g).Answer = "ничего интересного. можно пройти - кухня, комната, улица"
-				(*g).corridorStatus = true
-				(*g).kitchenStatus = false
-				(*g).roomStatus = false
-				c = command
-			}
-		}
-		c = command
+		case "взять":
+			r.Action = splitCmd[i]
+		case "применить":
+			r.Action = splitCmd[i]
+		case "ключи":
+			r.ItemOne = splitCmd[i]
+		case "конспекты":
+			r.ItemOne = splitCmd[i]
+		case "дверь":
+			r.ItemTwo = splitCmd[i]
+
+		case "надеть":
+			r.Action = splitCmd[i]
+		case "рюкзак":
+			r.ItemOne = splitCmd[i]
+		}*/
 	}
-	//fmt.Println("kitchenStatus-", g.kitchenStatus, "corridorStatus-", g.corridorStatus, "roomStatus-", g.roomStatus)
-	return c
 }
 
-// 4. Метод описывает взаимодействие игрока и рюкзака.
-func (g *GameWorld) takeTheBackpack(command string) (cmd string) { //метод вызывается после того, как в определенной комнате будет команда "надеть рюкзак"
-	if (*g).roomStatus == true {
-		if command == "надеть рюкзак" {
-			//fmt.Println("зашел")
-			(*g).backpackIsOn = true
-			(*g).backpackInTheRoom = false
-			(*g).Answer = "вы надели: рюкзак"
-			//fmt.Println(Command, (*g).backpackIsOn)
-			//fmt.Println("состояние рюкзака в комнате - ", (*g).backpackInTheRoom)
-			//awr = "вы надели: рюкзак"
+// 1
+func lookAround(l Location, r ResultsAfterSplit, c *Commands, i Items) {
+	if r.Action == c.LookAround {
+		if l.StatusLocation[l.Kitchen] == true {
+			c.Answer = "ты находишься на кухне, на столе чай, надо собрать рюкзак и идти в универ. можно пройти - коридор"
+		}
+		if l.StatusLocation[l.Room] == true {
+			if i.Backpack != "" && i.Key != "" && i.Abstracts != "" {
+				c.Answer = "на столе: ключи, конспекты, на стуле - рюкзак. можно пройти - коридор"
+			}
+			if i.Backpack == "" && i.Key != "" && i.Abstracts != "" {
+				c.Answer = "на столе: ключи, конспекты. можно пройти - коридор"
+			}
+			if i.Backpack == "" && i.Key == "" && i.Abstracts != "" {
+				c.Answer = "на столе: конспекты. можно пройти - коридор"
+			}
+			if i.Backpack == "" && i.Key == "" && i.Abstracts == "" {
+				c.Answer = "пустая комната. можно пройти - коридор"
+			}
 		}
 	}
-	cmd = command
-	return cmd
 }
 
-// 5. Метод описывает добавление предметов в рюкзак.
-func (g *GameWorld) putTheItemInTheBackpack(c string) /*(Answer string)*/ {
-	if (*g).backpackIsOn == true {
-		switch c {
-		case "взять ключи":
-			g.getItemsFromTheRoom(c)
-			g.deleteKeyInTneRoom()
-		case "взять конспекты":
-			g.getItemsFromTheRoom(c)
-			g.deleteAbstractsInTneRoom()
-		case "взять телефон":
-			(*g).Answer = "нет такого"
-			//fmt.Println("попытка взять несуществующий телефон -", (*g).Answer)
+func initializeMap(l *Location) {
+	l.Answer = make(map[string]string)
+	l.Answer[l.Room] = "ты в своей комнате. можно пройти - " + l.Corridor
+	l.Answer[l.Kitchen] = l.Kitchen + ", ничего интересного. можно пройти - " + l.Corridor
+	l.Answer[l.Corridor] = "ничего интересного. можно пройти - " + l.Kitchen + ", " + l.Room + ", " + l.Street
+	l.Answer[l.Street] = "на улице весна. можно пройти - домой"
+	l.Answer["нет пути"] = "нет пути в "
+
+	l.StatusLocation = make(map[string]bool)
+	l.StatusLocation[l.Room] = false
+	l.StatusLocation[l.Kitchen] = true
+	l.StatusLocation[l.Corridor] = false
+	l.StatusLocation[l.Street] = false
+}
+
+// 2
+func playerGoToLocation(r ResultsAfterSplit, c *Commands, l *Location, i Items) {
+	if r.Action == c.Go && r.ItemOne != l.Street {
+		for keyLoc, keyVal := range l.Answer {
+			if keyLoc == r.ItemOne && r.ItemOne != l.Corridor && l.StatusLocation[l.Corridor] == false { //In corridor
+				c.Answer = l.Answer["нет пути"] + r.ItemOne
+			} else if keyLoc == r.ItemOne && r.ItemOne == l.Corridor && l.StatusLocation[l.Corridor] == false {
+				c.Answer = l.Answer[l.Corridor]
+				l.StatusLocation[l.Corridor] = true
+				l.StatusLocation[l.Kitchen] = false
+				l.StatusLocation[l.Room] = false
+				l.StatusLocation[l.Street] = false
+				break
+			}
+			if keyLoc == r.ItemOne && r.ItemOne != l.Corridor && l.StatusLocation[l.Corridor] == true {
+				l.StatusLocation[l.Corridor] = false
+				for keyLocStat, _ := range l.StatusLocation {
+					if keyLocStat == r.ItemOne {
+						l.StatusLocation[keyLocStat] = true
+						break
+					}
+				}
+				c.Answer = keyVal
+			}
 		}
-	} else if (*g).backpackIsOn == false && (c == "взять ключи" || c == "взять конспекты") {
-		(*g).Answer = "некуда класть"
+	}
+	if r.ItemOne == l.Street && i.Door == "" {
+		c.Answer = l.Answer[l.Street]
+		l.StatusLocation[l.Street] = true
+	} else if r.ItemOne == l.Street && i.Door != "" {
+		c.Answer = "дверь закрыта"
 	}
 
-	//return Answer
 }
 
-/*type street struct {
-}*/
+// 3
+func backPackTrigger(r ResultsAfterSplit, c *Commands, l Location, i *Items) {
+	if r.Action == c.PutOn && l.StatusLocation[l.Room] == true {
+		if r.ItemOne == i.Backpack && i.Backpack != "" {
+			i.BackpackTrigger = true
+			c.Answer = "вы надели: " + i.Backpack
+			i.Backpack = ""
+		}
+	} else if r.Action == c.PutOn && l.StatusLocation[l.Room] != true {
+		c.Answer = "нет такого"
+	}
+}
 
-/*func (g *GameWorld) GetAnswer() string {
-	fmt.Println((*g).Answer)
-	return (*g).Answer
-}*/
+// 4
+func playerTakeSomething(r ResultsAfterSplit, i *Items, c *Commands, l Location) {
+	if r.Action == c.Take {
+		if i.BackpackTrigger == true && l.StatusLocation[l.Room] == true {
+			if r.ItemOne == i.Key || r.ItemOne == i.Abstracts {
+				c.Answer = "предмет добавлен в инвентарь: " + r.ItemOne
+				if r.ItemOne == i.Key {
+					i.Key = ""
+				}
+				if r.ItemOne == i.Abstracts {
+					i.Abstracts = ""
+					i.onTable = "пустая комната"
+				}
+				return
+			}
+			c.Answer = "нет такого"
+			return
+		}
+		c.Answer = "некуда класть"
+	}
+}
+
+// 5
+func playerApplyKey(r ResultsAfterSplit, i *Items, c *Commands, l Location) {
+	if r.Action == c.Apply {
+		if l.StatusLocation[l.Corridor] == true {
+			if i.Key == "" {
+				c.Answer = "дверь открыта"
+				i.Door = ""
+			} else {
+				c.Answer = "нет предмета в инвентаре - " + r.ItemOne
+			}
+		} else {
+			c.Answer = "не к чему применить"
+		}
+	}
+}
+
+// 6
+func deleteResultsAfterSplit(r *ResultsAfterSplit) {
+	r.Action = ""
+	r.ItemOne = ""
+	r.ItemTwo = ""
+}
+
+func initGame() {
+	/*fmt.Scanln(&Cmd)*/ Cmd = []string{"осмотреться", "идти коридор",
+		"идти кухня", "идти комната", "идти коридор",
+		"идти кухня", "идти коридор", "идти комната", "осмотреться", "взять ключи",
+		"надеть рюкзак", "взять ключи", "осмотреться",
+		"взять конспекты", "идти коридор", "применить ключи дверь", "идти улица"}
+
+	location := newLocation("коридор", "кухня", "улица", "комната")
+	items := newItems(false, "ключи", "конспекты", "рюкзак", "дверь", "на столе: ")
+	commands := newCommands("", "осмотреться", "идти", "надеть", "взять", "применить")
+	resultsAfterSplit := newResultsAfterSplit("", "", "")
+	initializeMap(location)
+
+	for i := range Cmd {
+		resultsAfterSplit.splitTheCommand(Cmd[i])
+		lookAround(*location, *resultsAfterSplit, commands, *items)
+		playerGoToLocation(*resultsAfterSplit, commands, location, *items)
+		backPackTrigger(*resultsAfterSplit, commands, *location, items)
+		playerTakeSomething(*resultsAfterSplit, items, commands, *location)
+		playerApplyKey(*resultsAfterSplit, items, commands, *location)
+
+		fmt.Println("cmd:", Cmd[i], "\n", "result:", commands.Answer)
+		/*fmt.Println("corridor", location.StatusLocation[location.Corridor], "/", "Kitchen", location.StatusLocation[location.Kitchen],
+		"/", "Room", location.StatusLocation[location.Room], "/", "Street", location.StatusLocation[location.Street])*/
+
+		deleteResultsAfterSplit(resultsAfterSplit)
+
+		command = Cmd[i]
+		Answer = commands.Answer
+		handleCommand(command)
+		commands.Answer = ""
+	}
+
+}
+
+var Cmd []string
+var command string
+var Answer string
 
 func handleCommand(cmd string) string {
-	fmt.Println(cmd, answer)
-	return answer
-}
-
-/*type gameCase struct {
-	step    int
-	command string
-	answer  string
-}*/
-
-var command string
-var answer string
-
-func initGame() ([]string, *GameWorld) {
-	commands := []string{"осмотреться", "идти коридор",
-		"идти комната", "осмотреться", "взять ключи",
-		"надеть рюкзак", "взять ключи", "осмотреться",
-		"взять конспекты", "идти коридор"}
-
-	g := newGameWorld(false, false,
-		false,
-		*newPlayer("", "", false, false, false),
-		*newRoom(false, false, false))
-
-	g.addThingsInTheRoom()
-	g.addPlayerPosition()
-
-	return commands, g
+	return Answer
 }
 
 func main() {
-	c, g := initGame()
-	for i := range c {
-		command = c[i]
-		g.putTheItemInTheBackpack(g.takeTheBackpack(g.getPlayerPosition(command)))
-		//g.GetAnswer()
-		answer = g.Answer
-		handleCommand(command)
-
-		fmt.Println("ИТЕРАЦИЯ-", i, "/", c[i], "/", g.Answer)
-
-	}
-
+	initGame()
 }
